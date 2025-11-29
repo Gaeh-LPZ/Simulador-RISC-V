@@ -9,4 +9,10 @@
     --color-text-muted: #A0A0A0;
     --color-bg-secondary: #3F7FFF;
     --color-bg-tertiary: #212837;
+
+    --font-Alumini-Sans: Alumni Sans SC, system-ui;
+}
+
+.buttons-center{
+    @apply bg-bg-tertiary size-11 flex flex-row items-center justify-center rounded-lg hover:cursor-pointer hover:scale-110 transform hover:bg-outline
 }
