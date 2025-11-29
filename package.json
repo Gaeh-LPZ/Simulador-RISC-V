@@ -1,0 +1,16 @@
+{
+  "name": "risc-v-simulation",
+  "version": "1.0.0",
+  "description": "Risc V first version",
+  "license": "ISC",
+  "author": "Gael Lopez Bautista, Joel Geovany Matias Santiago",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "build:styles": "npx @tailwindcss/cli -i ./css/input.css -o ./css/styles.css --watch"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.17",
+    "tailwindcss": "^4.1.17"
+  }
+}

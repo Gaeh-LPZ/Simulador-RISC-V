@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+    --color-bg-body: #1A1B26;
+    --color-bg-primary: #151C2C;
+    --color-outline: rgb(160 160 160 / 50%);
+    --color-active: #4CAF50;
+    --color-text-primary: #FFF;
+    --color-text-muted: #A0A0A0;
+    --color-bg-secondary: #3F7FFF;
+    --color-bg-tertiary: #212837;
+}
