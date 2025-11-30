@@ -4,7 +4,7 @@ import { defaultKeymap } from "@codemirror/commands";
 
 let startState = EditorState.create({
     doc : "addi x1, x0, 4",
-    keymap : keymap.of(defaultKeymap)
+    extensions : keymap.of(defaultKeymap)
 });
 
 let view = new EditorView ({
