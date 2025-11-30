@@ -4,13 +4,21 @@
   "description": "Risc V first version",
   "license": "ISC",
   "author": "Gael Lopez Bautista, Joel Geovany Matias Santiago",
-  "type": "commonjs",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "build:styles": "npx @tailwindcss/cli -i ./css/input.css -o ./css/styles.css --watch"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@tailwindcss/cli": "^4.1.17",
+    "@codemirror/commands": "^6.10.0",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.8",
     "tailwindcss": "^4.1.17"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.17",
+    "vite": "^7.2.4"
   }
 }

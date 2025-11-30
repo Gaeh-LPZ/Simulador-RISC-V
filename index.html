@@ -6,10 +6,11 @@
     <meta name="description" content="¿Quieres Simular la arquitectura RISC-V RV32I? Bueno, aquí puedes simular, ver el datapath, el contenido de los registros y la memoria, con esta página web amigable para el usuario puedes hacerlo">
     <title>Simulador de RISC-V | UTM</title>
     <link rel="icon" type="image/x-icon" href="./assets/images/RV.ico">
-    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="stylesheet" href="./css/input.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Afacad:ital,wght@0,400..700;1,400..700&family=Alumni+Sans+SC:ital,wght@0,100..900;1,100..900&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <script type="module" src="./js/app.js"></script>
 </head>
 <body class="bg-bg-body">
     <header class="flex flex-row justify-between p-2.5 bg-bg-primary items-center h-24 border-b border-outline">
@@ -54,7 +55,7 @@
                 <h2>Code Editor</h2>
                 <p>Assembly</p>
             </header>
-            
+            <div id="editor" class="h-full"></div>
         </section>
         <section class="row-span-1 font-Afacad text-sm bg-bg-primary outline outline-outline rounded-lg">
             <header class="bg-bg-primary p-2 border-b border-outline">
