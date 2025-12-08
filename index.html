@@ -24,13 +24,13 @@
         </div>
         <div class="flex flex-row gap-5">
             <!-- Seccion con botones de play, next y previous-->
-            <button class="buttons-center" type="button" aria-label="Boton de previous">
+            <button id="btn-prev" class="buttons-center" type="button" aria-label="Boton de previous">
                 <img src="./assets/icons/previous.svg" alt="previous-icon">
             </button>
-            <button class="buttons-center" type="button" aria-label="Boton de play">
+            <button id="btn-play" class="buttons-center" type="button" aria-label="Boton de play">
                 <img src="./assets/icons/play.svg" alt="play-icon">
             </button>
-            <button class="buttons-center" type="button" aria-label="Boton de Next">
+            <button id="btn-next" class="buttons-center" type="button" aria-label="Boton de Next">
                 <img src="./assets/icons/next.svg" alt="next-icon">
             </button>
         </div>
@@ -39,40 +39,49 @@
                 <img src="./assets/icons/watch.svg" alt="Watch icon to improve visuals" width="25" height="25">
                 Watch Simulation
             </button>
-            <button class="flex flex-row items-center justify-center gap-1 bg-bg-secondary rounded-lg text-lg h-12 w-[90px] cursor-pointer hover:scale-105 transform" type="button">
+            <button id="btn-run" class="flex flex-row items-center justify-center gap-1 bg-bg-secondary rounded-lg text-lg h-12 w-[90px] cursor-pointer hover:scale-105 transform" type="button">
                 <img src="./assets/icons/run.svg" alt="Run icon triangle shape" width="20" height="20">
                 Run
             </button>
-            <button class="bg-bg-tertiary flex flex-row items-center justify-center rounded-lg h-12 w-[120px] gap-1.5 cursor-pointer hover:scale-105 transform hover:bg-outline" type="button">
+            <button id="btn-reset" class="bg-bg-tertiary flex flex-row items-center justify-center rounded-lg h-12 w-[120px] gap-1.5 cursor-pointer hover:scale-105 transform hover:bg-outline" type="button">
                 <img src="./assets/icons/reset.svg" alt="Reset icon">
                 Reset
             </button>
         </div>
     </header>
-    <main class="grid grid-cols-2 grid-rows-3 text-white h-96 gap-6 p-3.5">
-        <section class="row-span-2 bg-bg-active outline outline-outline rounded-lg">
-            <header class="bg-bg-primary flex flex-row justify-between items-center font-Afacad text-sm p-2 border-b border-outline">
+    <main class="grid grid-cols-12 grid-rows-6 gap-4 p-4 text-white h-[calc(100vh-6rem)] w-full box-border">
+        
+        <section class="col-span-8 row-span-4 bg-bg-active outline outline-outline rounded-lg flex flex-col overflow-hidden">
+            <header class="bg-bg-primary flex flex-row justify-between items-center font-Afacad text-sm p-2 border-b border-outline shrink-0">
                 <h2>Code Editor</h2>
-                <p>Assembly</p>
+                <p class="text-xs text-gray-400">Assembly</p>
             </header>
-            <div id="editor" class="h-11/12"></div>
+            <div id="editor" class="flex-1 overflow-auto"></div>
         </section>
-        <section class="row-span-1 font-Afacad text-sm bg-bg-primary outline outline-outline rounded-lg">
-            <header class="bg-bg-primary p-2 border-b border-outline">
-                <h2>Registers</h2>
+
+        <section class="col-span-4 row-span-2 bg-bg-primary outline outline-outline rounded-lg flex flex-col overflow-hidden">
+            <header class="bg-bg-primary border-b border-outline p-2 shrink-0">
+                <h2 class="font-Afacad text-sm">Registers</h2>
             </header>
-            
+            <div id="registers-container" class="flex-1 overflow-y-auto p-2 font-mono text-xs grid grid-cols-1 gap-x-2 gap-y-1 content-start">
+                </div>
         </section>
-        <section class="bg-bg-primary font-Afacad text-sm row-span-1 outline outline-outline rounded-lg">
-            <header class="bg-bg-primary border-b border-outline p-2">
-                <h2>Memory</h2>
+
+        <section class="col-span-4 row-span-2 bg-bg-primary outline outline-outline rounded-lg flex flex-col overflow-hidden">
+            <header class="bg-bg-primary border-b border-outline p-2 shrink-0">
+                <h2 class="font-Afacad text-sm">Memory</h2>
             </header>
-            
+            <div id="memory-container" class="flex-1 overflow-y-auto p-2 font-mono text-xs">
+                </div>
         </section>
-        <section class="bg-bg-primary outline outline-outline col-span-2 rounded-lg font-Afacad text-sm">
-            <header class="bg-bg-primary p-2 border-b border-outline">
-                <h2>Console</h2>
+
+        <section class="col-span-12 row-span-2 bg-bg-active outline outline-outline rounded-lg flex flex-col overflow-hidden">
+            <header class="bg-bg-primary p-2 border-b border-outline shrink-0">
+                <h2 class="font-Afacad text-sm">Console</h2>
             </header>
+            <div id="console-output" class="flex-1 overflow-y-auto p-2 font-mono text-sm text-green-400 bg-bg-tertiary">
+                > Sistema listo.
+            </div>
         </section>
     </main>
     <footer></footer>
