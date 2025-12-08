@@ -19,16 +19,12 @@
 
 <body class="bg-bg-body">
     <header class="flex flex-row justify-between p-2.5 bg-bg-primary items-center h-24 border-b border-outline">
-        <!-- El Header tendrá 3 secciones, una con el logo y el titulo-->
-        <!-- Otra con los 3 botones de previous, play y next-->
-        <!-- Y por ultimo la seccion con los tres botones de Run, Reset y Watch-->
         <div class="flex flex-row items-center text-white gap-3 justify-center">
-            <!-- Seccion con logo y titulo-->
             <img src="./assets/images/RISC_V-logo.png" alt="Logo de la arquitectura RISC-V" width="55" height="55">
             <h1 class="font-Alumini-Sans text-4xl font-semibold text-center">Simulador de RISC-V</h1>
         </div>
+
         <div class="flex flex-row gap-5">
-            <!-- Seccion con botones de play, next y previous-->
             <button id="btn-prev" class="buttons-center" type="button" aria-label="Boton de previous">
                 <img src="./assets/icons/previous.svg" alt="previous-icon">
             </button>
@@ -39,13 +35,14 @@
                 <img src="./assets/icons/next.svg" alt="next-icon">
             </button>
         </div>
+
         <div class="flex flex-row text-white gap-2">
-            <a href="simulatio.html">
+            <a href="index.html">
                 <button
                     class="flex flex-row w-40 items-center justify-center font-Alumini-Sans text-xl gap-1 bg-bg-tertiary rounded-lg h-12 cursor-pointer hover:scale-105 transform hover:bg-outline"
                     type="button">
                     <img src="./assets/icons/watch.svg" alt="Watch icon to improve visuals" width="25" height="25">
-                    Watch Simulation
+                    Watch Registers
                 </button>
             </a>
             <button id="btn-run"
@@ -62,10 +59,12 @@
             </button>
         </div>
     </header>
+
+    <!-- Layout principal -->
     <main class="grid grid-cols-12 grid-rows-6 gap-4 p-4 text-white h-[calc(100vh-6rem)] w-full box-border">
 
         <section
-            class="col-span-8 row-span-4 bg-bg-active outline outline-outline rounded-lg flex flex-col overflow-hidden">
+            class="col-span-4 row-span-5 bg-bg-active outline outline-outline rounded-lg flex flex-col overflow-hidden">
             <header
                 class="bg-bg-primary flex flex-row justify-between items-center font-Afacad text-sm p-2 border-b border-outline shrink-0">
                 <h2>Code Editor</h2>
@@ -75,35 +74,73 @@
         </section>
 
         <section
-            class="col-span-4 row-span-2 bg-bg-primary outline outline-outline rounded-lg flex flex-col overflow-hidden">
-            <header class="bg-bg-primary border-b border-outline p-2 shrink-0">
-                <h2 class="font-Afacad text-sm">Registers</h2>
+            class="col-span-8 row-span-5 bg-bg-primary outline outline-outline rounded-lg flex flex-col overflow-hidden">
+            <header
+                class="bg-bg-primary border-b border-outline p-2 shrink-0 flex flex-row justify-between items-center">
+                <h2 class="font-Afacad text-sm">Datapath (RISC-V RV32I)</h2>
+                <span class="text-[10px] text-gray-400">Interactivo</span>
             </header>
-            <div id="registers-container"
-                class="flex-1 overflow-y-auto p-2 font-mono text-xs grid grid-cols-1 gap-x-2 gap-y-1 content-start">
-            </div>
+            <div id="datapath-container" class="flex-1 bg-bg-tertiary"></div>
         </section>
 
         <section
-            class="col-span-4 row-span-2 bg-bg-primary outline outline-outline rounded-lg flex flex-col overflow-hidden">
-            <header class="bg-bg-primary border-b border-outline p-2 shrink-0">
-                <h2 class="font-Afacad text-sm">Memory</h2>
-            </header>
-            <div id="memory-container" class="flex-1 overflow-y-auto p-2 font-mono text-xs">
-            </div>
-        </section>
-
-        <section
-            class="col-span-12 row-span-2 bg-bg-active outline outline-outline rounded-lg flex flex-col overflow-hidden">
+            class="col-span-12 row-span-1 bg-bg-active outline outline-outline rounded-lg flex flex-col overflow-hidden">
             <header class="bg-bg-primary p-2 border-b border-outline shrink-0">
                 <h2 class="font-Afacad text-sm">Console</h2>
             </header>
             <div id="console-output" class="flex-1 overflow-y-auto p-2 font-mono text-sm text-green-400 bg-bg-tertiary">
-                > Sistema listo.
+                &gt; Sistema listo.
             </div>
         </section>
     </main>
+
     <footer></footer>
+
+    <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+
+    <script src="js/view/ModuleBase.js"></script>
+    <script src="js/view/ProgramCounter.js"></script>
+    <script src="js/view/PCIncrementBranch.js"></script>
+    <script src="js/view/MemoriaDePrograma.js"></script>
+    <script src="js/view/GeneradorInmediatos.js"></script>
+    <script src="js/view/UnidadDeControl.js"></script>
+    <script src="js/view/BancoDeRegistros.js"></script>
+    <script src="js/view/MuxALUSrc.js"></script>
+    <script src="js/view/ALU.js"></script>
+    <script src="js/view/MemoriaDeDatos.js"></script>
+    <script src="js/view/MuxALU2REG.js"></script>
+    <script src="js/view/BranchLogic.js"></script>
+    <script src="js/view/TopDatapath.js"></script>
+
+    <script>
+        window.addEventListener('load', () => {
+            const container = document.getElementById('datapath-container');
+
+            const stage = new Konva.Stage({
+                container: 'datapath-container',
+                width: container.clientWidth,
+                height: container.clientHeight,
+            });
+
+            const layer = new Konva.Layer();
+            stage.add(layer);
+
+            const top = TopDatapath.create({
+                layer,
+                width: container.clientWidth,
+                height: container.clientHeight,
+            });
+
+            top.highlightPath('R');
+
+            window.addEventListener('resize', () => {
+                const { clientWidth, clientHeight } = container;
+                stage.width(clientWidth);
+                stage.height(clientHeight);
+                top.fitToContainer(clientWidth, clientHeight);
+            });
+        });
+    </script>
 </body>
 
 </html>
