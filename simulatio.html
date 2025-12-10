@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
-        content="¿Quieres Simular la arquitectura RISC-V RV32I? Bueno, aquí puedes simular, ver el datapath, el contenido de los registros y la memoria, con esta página web amigable para el usuario puedes hacerlo">
+        content="¿Quieres Simular la arquitectura RISC-V RV32I? Bueno, aquí puedes simular, ver el datapath, el contenido de los registros y la memoria.">
     <title>Simulador de RISC-V | UTM</title>
     <link rel="icon" type="image/x-icon" href="./assets/images/RV.ico">
     <link rel="stylesheet" href="./css/input.css">
@@ -60,7 +60,6 @@
         </div>
     </header>
 
-    <!-- Layout principal -->
     <main class="grid grid-cols-12 grid-rows-6 gap-4 p-4 text-white h-[calc(100vh-6rem)] w-full box-border">
 
         <section
@@ -80,7 +79,7 @@
                 <h2 class="font-Afacad text-sm">Datapath (RISC-V RV32I)</h2>
                 <span class="text-[10px] text-gray-400">Interactivo</span>
             </header>
-            <div id="datapath-container" class="flex-1 bg-bg-tertiary"></div>
+            <div id="datapath-container" class="flex-1 bg-bg-tertiary overflow-hidden"></div>
         </section>
 
         <section
@@ -112,35 +111,9 @@
     <script src="js/view/BranchLogic.js"></script>
     <script src="js/view/TopDatapath.js"></script>
 
-    <script>
-        window.addEventListener('load', () => {
-            const container = document.getElementById('datapath-container');
+    <!-- PARCHE: añadir top.modules con claves que app.js espera -->
+    <script src="js/view/TopDatapath.fix.js"></script>
 
-            const stage = new Konva.Stage({
-                container: 'datapath-container',
-                width: container.clientWidth,
-                height: container.clientHeight,
-            });
-
-            const layer = new Konva.Layer();
-            stage.add(layer);
-
-            const top = TopDatapath.create({
-                layer,
-                width: container.clientWidth,
-                height: container.clientHeight,
-            });
-
-            top.highlightPath('R');
-
-            window.addEventListener('resize', () => {
-                const { clientWidth, clientHeight } = container;
-                stage.width(clientWidth);
-                stage.height(clientHeight);
-                top.fitToContainer(clientWidth, clientHeight);
-            });
-        });
-    </script>
 </body>
 
 </html>
