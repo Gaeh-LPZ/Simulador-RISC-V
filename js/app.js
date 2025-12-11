@@ -24,15 +24,39 @@ const activeLineField = StateField.define({
     provide: f => EditorView.decorations.from(f)
 });
 
+// -------------------------
+// Editor CodeMirror (editable)
+// -------------------------
+const INITIAL_DOC = `addi x1, x0, 10
+addi x2, x0, 5
+add x3, x1, x2
+sw x3, 0(x0)`;
+
 let startState = EditorState.create({
-    doc: "addi x1, x0, 10\naddi x2, x0, 5\nadd x3, x1, x2\nsw x3, 0(x0)",
-    extensions: [keymap.of(defaultKeymap), activeLineField]
+    doc: INITIAL_DOC,
+    extensions: [
+        keymap.of(defaultKeymap),
+        activeLineField,
+        EditorView.editable.of(true)
+    ]
 });
 
 let view = new EditorView({
     state: startState,
     parent: document.getElementById('editor')
 });
+
+function getEditorCode() {
+    return view.state.doc.toString();
+}
+
+function setEditorCode(code) {
+    const tr = view.state.update({
+        changes: { from: 0, to: view.state.doc.length, insert: code }
+    });
+    view.dispatch(tr);
+    view.focus();
+}
 
 // --- SISTEMA ---
 const memProg = new MemoriaDePrograma(1024);
@@ -41,16 +65,32 @@ const cpu = new CPU({ memoriaPrograma: memProg, memoriaDatos: memDatos });
 const assembler = new Assembler();
 
 // ==========================================
-// --- VISUALIZACIÓN (KONVA) - ENHANCED CÓDIGO ---
+// --- VISUALIZACIÓN (KONVA) ---
 // ==========================================
-const SCENE_WIDTH = 1250; 
+const SCENE_WIDTH = 1250;
 const SCENE_HEIGHT = 700;
 
-let visualModules = {}; 
+let visualModules = {};
 let visualLayer = null;
 let visualStage = null;
 let visualWires = []; // array de { line, from, to }
-let lastDebug = null;  // debug info devuelta por cpu.step()
+let lastDebug = null; // debug info devuelta por cpu.step()
+
+// Helper: buscar la clave real de un módulo entre varias aliases
+function findModuleKey(candidates) {
+    if (!visualModules) return null;
+    for (let cand of candidates) {
+        if (!cand) continue;
+        if (visualModules[cand]) return cand;
+
+        const norm = String(cand).toUpperCase().replace(/\s+/g, '_');
+        if (visualModules[norm]) return norm;
+
+        const plain = String(cand).toUpperCase().replace(/[^A-Z0-9_]/g, '');
+        if (visualModules[plain]) return plain;
+    }
+    return null;
+}
 
 // 1. Inicializar el diagrama visual
 function initVisualDatapath() {
@@ -70,13 +110,8 @@ function initVisualDatapath() {
     if (window.TopDatapath) {
         const top = window.TopDatapath.create({ layer: visualLayer });
 
-        // top.modules debería contener wrappers (TopDatapath.fix.js lo prepara)
         visualModules = top.modules || {};
-
-        // top.wireMap es la lista de wires con from/to
         visualWires = top.wireMap || [];
-
-        // Guardamos el grupo principal para escalarlo
         visualLayer.mainGroup = top.group;
 
         // Inicial: dejar módulos opacos y wires en color neutro
@@ -88,7 +123,6 @@ function initVisualDatapath() {
         });
         visualWires.forEach((w) => {
             if (w && w.line) {
-                // estilo base
                 w.line.stroke('#4a4a4a');
                 w.line.strokeWidth(2);
             }
@@ -102,7 +136,7 @@ function initVisualDatapath() {
 
         const scaleX = containerWidth / SCENE_WIDTH;
         const scaleY = containerHeight / SCENE_HEIGHT;
-        let scale = Math.min(scaleX, scaleY); // Escala proporcional
+        const scale = Math.min(scaleX, scaleY);
 
         visualStage.width(containerWidth);
         visualStage.height(containerHeight);
@@ -115,9 +149,9 @@ function initVisualDatapath() {
             const currentWidth = SCENE_WIDTH * scale;
             const xOffset = (containerWidth - currentWidth) / 2;
 
-            visualLayer.mainGroup.position({ 
-                x: xOffset > 0 ? xOffset : 0, 
-                y: yOffset > 0 ? yOffset : 0 
+            visualLayer.mainGroup.position({
+                x: xOffset > 0 ? xOffset : 0,
+                y: yOffset > 0 ? yOffset : 0
             });
         }
         visualLayer.batchDraw();
@@ -132,22 +166,49 @@ function initVisualDatapath() {
 function setModuleValue(name, lines) {
     const mod = visualModules[name];
     if (!mod) return;
+
+    const BASE_FONT_SIZE = 16;
+    const LINE_HEIGHT = 1.2;
+    const DEFAULT_WIDTH = 140;
+
     if (typeof mod.setValueLabel === 'function') {
         mod.setValueLabel(lines);
-    } else {
-        // fallback: crear un texto dentro del group
-        if (!mod.group._valueLabel) {
-            const label = new Konva.Text({
-                x: 10, y: 35, fontSize: 11,
-                fontFamily: 'Ubuntu Mono, monospace', fill: '#3b2c12',
-                listening: false,
-            });
-            mod.group.add(label);
-            mod.group._valueLabel = label;
+        const lbl = mod.group && mod.group._valueLabel ? mod.group._valueLabel : null;
+        if (lbl) {
+            lbl.fontSize(BASE_FONT_SIZE);
+            lbl.lineHeight(LINE_HEIGHT);
+            lbl.fontStyle('bold');
+            lbl.width(DEFAULT_WIDTH);
+            if (mod.group.getLayer) mod.group.getLayer().batchDraw();
         }
-        mod.group._valueLabel.text((lines || []).join('\n'));
-        if (mod.group.getLayer()) mod.group.getLayer().batchDraw();
+        return;
     }
+
+    if (!mod.group._valueLabel) {
+        const label = new Konva.Text({
+            x: 10,
+            y: 30,
+            fontSize: BASE_FONT_SIZE,
+            fontFamily: 'Ubuntu Mono, monospace',
+            fontStyle: 'bold',
+            fill: '#3b2c12',
+            listening: false,
+            width: DEFAULT_WIDTH,
+            align: 'left',
+            lineHeight: LINE_HEIGHT
+        });
+        mod.group.add(label);
+        mod.group._valueLabel = label;
+    } else {
+        const lbl = mod.group._valueLabel;
+        lbl.fontSize(BASE_FONT_SIZE);
+        lbl.lineHeight(LINE_HEIGHT);
+        lbl.fontStyle('bold');
+        lbl.width(DEFAULT_WIDTH);
+    }
+
+    mod.group._valueLabel.text((lines || []).join('\n'));
+    if (mod.group.getLayer) mod.group.getLayer().batchDraw();
 }
 
 // Helper: activar/desactivar módulo (cambia opacidad)
@@ -189,29 +250,48 @@ function wiresForModule(name) {
 function updateVisualsFromCPU() {
     if (!visualLayer) return;
 
-    // Estado basico: PC y MemProg
-    const currentPC = cpu.pc.valor;
-    setModuleValue('PC', [`PC: 0x${currentPC.toString(16).toUpperCase().padStart(4,'0')}`]);
+    // Resolver claves reales de módulos (según nombres de la vista)
+    const KEY_PC        = findModuleKey(['PC', 'ProgramCounter', 'PROGRAMCOUNTER']);
+    const KEY_MEMPROG   = findModuleKey(['MEM_PROG', 'MemoriaDePrograma', 'MEMORIADEPROGRAMA']);
+    const KEY_UCTRL     = findModuleKey(['UCTRL', 'UnidadDeControl', 'UNIDADDECONTROL']);
+    const KEY_REGFILE   = findModuleKey(['REGFILE', 'BancoDeRegistros', 'BANCODEREGISTROS']);
+    const KEY_ALU       = findModuleKey(['ALU']);
+    const KEY_MEMDATA   = findModuleKey(['MEM_DATA', 'MemoriaDeDatos', 'MEMORIADATOS']);
+    const KEY_MUX_ALUSRC= findModuleKey(['MuxALUSrc', 'MUX_ALUSRC', 'MuxALUSrcModule']);
+    const KEY_MUX_ALU2REG = findModuleKey(['MUX_ALU2REG', 'MuxALU2REG', 'MuxALU2REGModule']);
+    const KEY_GEN_IMM   = findModuleKey(['GeneradorInmediatos', 'GEN_IMM']);
+    const KEY_PC_INC    = findModuleKey(['PC Increment/Branch', 'PCIncrementBranch', 'PC_INC']);
+    const KEY_BRANCH    = findModuleKey(['BranchLogic', 'BRANCHLOGIC', 'BRANCH']);
 
-    let rawInst = 0;
-    try { rawInst = cpu.memoriaPrograma.leer(currentPC); } catch(e){}
-    setModuleValue('MEM_PROG', [`Inst: 0x${(rawInst >>> 0).toString(16).toUpperCase().padStart(8,'0')}`]);
+    // Estado básico: PC y MemProg
+    if (KEY_PC) {
+        const currentPC = cpu.pc.valor;
+        setModuleValue(KEY_PC, [`PC: 0x${currentPC.toString(16).toUpperCase().padStart(4,'0')}`]);
+    }
 
-    // Si tenemos debug de la última instrucción, lo usamos para rellenar módulos
+    if (KEY_MEMPROG) {
+        let rawInst = 0;
+        try { rawInst = cpu.memoriaPrograma.leer(cpu.pc.valor); } catch(e){}
+        setModuleValue(KEY_MEMPROG, [`Inst: 0x${(rawInst >>> 0).toString(16).toUpperCase().padStart(8,'0')}`]);
+    }
+
     const dbg = lastDebug;
 
-    // Default: opacar todos menos PC/MEM_PROG
+    // Default: opacar todos
     Object.keys(visualModules).forEach(k => setModuleActive(k, false));
-    setModuleActive('PC', true);
-    setModuleActive('MEM_PROG', true);
+    if (KEY_PC) setModuleActive(KEY_PC, true);
+    if (KEY_MEMPROG) setModuleActive(KEY_MEMPROG, true);
 
-    // Reset wires a estado inactivo
+    // Reset wires
     visualWires.forEach(w => setWireActive(w, false));
 
     if (dbg) {
+        // Para ser robustos con el nombre del campo: immediato vs inmediato
+        const immVal = (dbg.inmediato !== undefined ? dbg.inmediato : dbg.immediato);
+
         // Unidad de control
         try {
-            if (dbg.control) {
+            if (dbg.control && KEY_UCTRL) {
                 const opcode = dbg.control.opcode || (dbg.instruccion & 0x7F);
                 let typeStr = '---';
                 if (opcode === 0x33) typeStr = "R-Type";
@@ -220,55 +300,62 @@ function updateVisualsFromCPU() {
                 else if (opcode === 0x23) typeStr = "S-Type";
                 else if (opcode === 0x63) typeStr = "B-Type";
 
-                setModuleValue('UCTRL', [
+                setModuleValue(KEY_UCTRL, [
                     `Opcode: 0x${(opcode).toString(16)}`,
                     `Type: ${typeStr}`,
                     `rd: ${dbg.control.rd}`,
                     `rs1: ${dbg.control.rs1}`,
                     `rs2: ${dbg.control.rs2}`
                 ]);
-                setModuleActive('UCTRL', true);
-                // iluminar wires desde MEM_PROG -> UCTRL
-                wiresForModule('MEM_PROG').forEach(w => {
-                    if (w.to && (w.to.name === 'UCTRL' || w.to.name === 'UnidadDeControl')) setWireActive(w, true);
+                setModuleActive(KEY_UCTRL, true);
+
+                if (KEY_MEMPROG) wiresForModule(KEY_MEMPROG).forEach(w => {
+                    if (w.to && (w.to.name === 'UnidadDeControl' || w.to.name === KEY_UCTRL)) setWireActive(w, true);
                 });
             }
-        } catch (e){}
+        } catch (e) {}
 
         // Registros
         try {
-            // mostrar valores de rs1/rs2
-            if (typeof dbg.valorRs1 !== 'undefined' || typeof dbg.valorRs2 !== 'undefined') {
-                const rs1 = typeof dbg.valorRs1 !== 'undefined' ? dbg.valorRs1 : cpu.bancoRegistros.leerRegistro(dbg.control ? dbg.control.rs1 : 0);
-                const rs2 = typeof dbg.valorRs2 !== 'undefined' ? dbg.valorRs2 : cpu.bancoRegistros.leerRegistro(dbg.control ? dbg.control.rs2 : 0);
+            if (KEY_REGFILE && (typeof dbg.valorRs1 !== 'undefined' || typeof dbg.valorRs2 !== 'undefined')) {
+                const rs1 = typeof dbg.valorRs1 !== 'undefined'
+                    ? dbg.valorRs1
+                    : cpu.bancoRegistros.leerRegistro(dbg.control ? dbg.control.rs1 : 0);
+                const rs2 = typeof dbg.valorRs2 !== 'undefined'
+                    ? dbg.valorRs2
+                    : cpu.bancoRegistros.leerRegistro(dbg.control ? dbg.control.rs2 : 0);
                 const rdName = dbg.control && typeof dbg.control.rd !== 'undefined' ? `rd:${dbg.control.rd}` : '';
-                const rdVal = (dbg.control && typeof dbg.control.rd !== 'undefined') ? cpu.bancoRegistros.leerRegistro(dbg.control.rd) : 0;
-                setModuleValue('REGFILE', [
+                const rdVal = (dbg.control && typeof dbg.control.rd !== 'undefined')
+                    ? cpu.bancoRegistros.leerRegistro(dbg.control.rd)
+                    : 0;
+
+                setModuleValue(KEY_REGFILE, [
                     `rd1: 0x${(rs1 >>> 0).toString(16).padStart(8,'0')}`,
                     `rd2: 0x${(rs2 >>> 0).toString(16).padStart(8,'0')}`,
                     `${rdName}: 0x${(rdVal>>>0).toString(16).padStart(8,'0')}`
                 ]);
-                setModuleActive('REGFILE', true);
-                // iluminar wires desde Banco -> ALU / MuxALUSrc
-                wiresForModule('REGFILE').forEach(w => {
-                    if (w.to && (w.to.name === 'ALU' || w.to.name === 'MUX_ALUSRC')) setWireActive(w, true);
+                setModuleActive(KEY_REGFILE, true);
+
+                wiresForModule(KEY_REGFILE).forEach(w => {
+                    if (w.to && (w.to.name === 'ALU' || w.to.name === KEY_MUX_ALUSRC || w.to.name === 'MuxALUSrc')) {
+                        setWireActive(w, true);
+                    }
                 });
             }
         } catch (e) {}
 
         // ALU
         try {
-            if (typeof dbg.operandoA !== 'undefined' || typeof dbg.operandoB !== 'undefined' || typeof dbg.resultadoALU !== 'undefined') {
+            if (KEY_ALU && (typeof dbg.operandoA !== 'undefined' || typeof dbg.operandoB !== 'undefined' || typeof dbg.resultadoALU !== 'undefined')) {
                 const opA = dbg.operandoA;
                 const opB = dbg.operandoB;
                 const res = dbg.resultadoALU;
-                setModuleValue('ALU', [
+                setModuleValue(KEY_ALU, [
                     `opA: 0x${(opA>>>0).toString(16).padStart(8,'0')}`,
                     `opB: 0x${(opB>>>0).toString(16).padStart(8,'0')}`,
                     `res: 0x${(res>>>0).toString(16).padStart(8,'0')}`
                 ]);
-                setModuleActive('ALU', true);
-                // iluminar entradas y salidas relacionadas
+                setModuleActive(KEY_ALU, true);
                 visualWires.forEach(w => {
                     if (w.to && w.to.name === 'ALU') setWireActive(w, true);
                     if (w.from && w.from.name === 'ALU') setWireActive(w, true);
@@ -278,82 +365,75 @@ function updateVisualsFromCPU() {
 
         // Mux ALUSrc
         try {
-            // mostrar imm/rd2 y seleccion
-            if (dbg && dbg.immediato !== undefined) {
-                setModuleValue('MUX_ALUSRC', [
+            if (KEY_MUX_ALUSRC && (immVal !== undefined || (dbg.control && dbg.control.aluSrcInm))) {
+                setModuleValue(KEY_MUX_ALUSRC, [
                     `rd2: ${dbg.valorRs2 !== undefined ? dbg.valorRs2 : ''}`,
-                    `imm: ${dbg.immediato}`,
+                    `imm: ${immVal !== undefined ? immVal : ''}`,
                     `sel: ${dbg.control && dbg.control.aluSrcInm ? dbg.control.aluSrcInm : ''}`
                 ]);
-                setModuleActive('MUX_ALUSRC', true);
+                setModuleActive(KEY_MUX_ALUSRC, true);
+            }
+        } catch (e) {}
+
+        // Generador de Inmediatos
+        try {
+            if (KEY_GEN_IMM && immVal !== undefined) {
+                setModuleValue(KEY_GEN_IMM, [`imm: ${immVal}`]);
+                setModuleActive(KEY_GEN_IMM, true);
+                visualWires.forEach(w => {
+                    if (w.from && (w.from.name === 'GeneradorInmediatos' || w.from.name === KEY_GEN_IMM)) {
+                        setWireActive(w, true);
+                    }
+                });
             }
         } catch (e) {}
 
         // Memoria de datos
         try {
-            if (dbg && (dbg.direccionMem !== undefined || dbg.datoMemoria !== undefined || dbg.control && (dbg.control.memRead || dbg.control.memWrite))) {
-                setModuleValue('MEM_DATA', [
+            if (KEY_MEMDATA && (dbg.direccionMem !== undefined || dbg.datoMemoria !== undefined || (dbg.control && (dbg.control.memRead || dbg.control.memWrite)))) {
+                setModuleValue(KEY_MEMDATA, [
                     `addr: 0x${((dbg.direccionMem||0)>>>0).toString(16).padStart(8,'0')}`,
                     `wdata: ${dbg.valorRs2!==undefined ? dbg.valorRs2 : ''}`,
                     `rdata: ${dbg.datoMemoria!==undefined ? dbg.datoMemoria : ''}`,
                     `we: ${dbg.control ? !!dbg.control.memWrite : false}`
                 ]);
-                setModuleActive('MEM_DATA', true);
-                // iluminar wires ALU->MemDatos y MemDatos->MuxALU2REG
-                visualWires.forEach(w => {
-                    if ( (w.from && w.from.name === 'ALU' && w.to && w.to.name === 'MEM_DATA') ||
-                         (w.from && w.from.name === 'MEM_DATA' && w.to && w.to.name === 'MUX_ALU2REG') ) {
-                        setWireActive(w, true);
-                    }
-                });
+                setModuleActive(KEY_MEMDATA, true);
             }
         } catch (e) {}
 
-        // MuxALU2REG / writeback
+        // Mux ALU2REG / writeback
         try {
-            if (dbg && typeof dbg.resultadoALU !== 'undefined') {
+            if (KEY_MUX_ALU2REG && typeof dbg.resultadoALU !== 'undefined') {
                 const memRead = dbg.datoMemoria !== undefined ? dbg.datoMemoria : 0;
                 const aluRes = dbg.resultadoALU;
-                setModuleValue('MUX_ALU2REG', [
+                setModuleValue(KEY_MUX_ALU2REG, [
                     `alu_res: 0x${(aluRes>>>0).toString(16).padStart(8,'0')}`,
                     `mem_rd: ${memRead}`,
                     `sel: ${(dbg.control && typeof dbg.control.memToReg !== 'undefined') ? dbg.control.memToReg : ''}`
                 ]);
-                setModuleActive('MUX_ALU2REG', true);
-                // iluminar wires mux->Banco
-                visualWires.forEach(w => {
-                    if ( (w.from && w.from.name === 'MUX_ALU2REG' && w.to && w.to.name === 'REGFILE') ||
-                         (w.from && w.from.name === 'MUX_ALU2REG' && (w.to && w.to.name === 'BancoDeRegistros')) ) {
-                        setWireActive(w, true);
-                    }
-                });
+                setModuleActive(KEY_MUX_ALU2REG, true);
             }
         } catch (e) {}
 
-        // GenImm
+        // PC Increment / Branch + BranchLogic
         try {
-            if (dbg && typeof dbg.immediato !== 'undefined') {
-                setModuleValue('GEN_IMM', [`imm: ${dbg.immediato}`]);
-                setModuleActive('GEN_IMM', true);
-                // iluminar wires genImm->mux/pcInc
-                visualWires.forEach(w => {
-                    if (w.from && w.from.name === 'GEN_IMM') setWireActive(w, true);
-                });
-            }
-        } catch (e) {}
-
-        // PC Inc / Branch logic
-        try {
-            if (dbg && typeof dbg.tomarBranch !== 'undefined') {
-                setModuleValue('PC_INC', [`next: 0x${(dbg.pcSiguiente>>>0).toString(16).padStart(8,'0')}`, `branch: ${dbg.tomarBranch}`]);
-                setModuleActive('PC_INC', true);
-                setModuleActive('BRANCH', !!dbg.tomarBranch);
+            if (typeof dbg.tomarBranch !== 'undefined') {
+                if (KEY_PC_INC) {
+                    setModuleValue(KEY_PC_INC, [
+                        `next: 0x${(dbg.pcSiguiente>>>0).toString(16).padStart(8,'0')}`,
+                        `branch: ${dbg.tomarBranch}`
+                    ]);
+                    setModuleActive(KEY_PC_INC, true);
+                }
+                if (KEY_BRANCH) {
+                    setModuleActive(KEY_BRANCH, !!dbg.tomarBranch);
+                }
             }
         } catch (e) {}
     } else {
-        // no hay debug: mostramos solo estado general
-        setModuleValue('REGFILE', ['Reg File', 'Active']);
-        setModuleValue('MEM_DATA', ['Data Mem', 'Ready']);
+        // Fallback cuando no hay debug
+        if (KEY_REGFILE) setModuleValue(KEY_REGFILE, ['Reg File', 'Active']);
+        if (KEY_MEMDATA) setModuleValue(KEY_MEMDATA, ['Data Mem', 'Ready']);
     }
 
     visualLayer.batchDraw();
@@ -362,7 +442,9 @@ function updateVisualsFromCPU() {
 // Inicializar visuales al cargar la página
 window.addEventListener('load', initVisualDatapath);
 
-/* --- resto de tu app.js: botones y lógica de control adaptada para capturar debug --- */
+// ==========================================
+// --- LÓGICA DE CONTROL / BOTONES ---
+// ==========================================
 
 // ESTADO GLOBAL
 let currentLineMap = [];
@@ -440,7 +522,7 @@ function updateUI() {
         }
     }
 
-    // 4. VISUAL: Actualizar Diagrama Konva (si está inicializado)
+    // 4. VISUAL
     updateVisualsFromCPU();
 }
 
@@ -475,14 +557,13 @@ btnRun.addEventListener('click', () => {
     consoleOut.innerHTML = '';
 
     try {
-        const codeText = view.state.doc.toString();
+        const codeText = getEditorCode();
         const result = assembler.assemble(codeText);
 
         currentLineMap = result.lineMap;
         currentMachineCode = result.machineCode;
 
         isProgramLoaded = true;
-
         softReset();
         logConsole("Código ensamblado y cargado.");
     } catch (error) {
@@ -560,7 +641,9 @@ btnNext.addEventListener('click', () => {
         const dbg = cpu.step();
         lastDebug = dbg;
         updateUI();
-    } catch (e) { logConsole(e.message, 'error'); }
+    } catch (e) {
+        logConsole(e.message, 'error');
+    }
 });
 
 // PREV
@@ -574,7 +657,6 @@ btnPrev.addEventListener('click', () => {
     cpu.bancoRegistros.importarEstado(state.regs);
     cpu.memoriaDatos.importarEstado(state.mem);
 
-    // no tenemos debug de la instrucción a la que retrocedimos -> limpiar visual
     lastDebug = null;
     updateUI();
     logConsole("Retroceso.");

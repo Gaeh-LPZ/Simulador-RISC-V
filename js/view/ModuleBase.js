@@ -40,7 +40,7 @@
         const leftColumnWidth = baseWidth / 2 - 2 * padding;
         const rightColumnWidth = baseWidth / 2 - 2 * padding;
 
-
+        const CONNECTOR_TOP_OFFSET = 50;
         const group = new Konva.Group({
             x,
             y,
@@ -65,7 +65,7 @@
             width: baseWidth,
             align: 'center',
             text: name,
-            fontSize: 14,
+            fontSize: 15,
             fontStyle: 'bold',
             fill: c.titleText,
         });
@@ -73,7 +73,7 @@
         group.add(title);
 
         // Zona interna para labels
-        const contentTop = padding + titleHeight;
+        const contentTop = padding + titleHeight + CONNECTOR_TOP_OFFSET;
         const contentBottom = baseHeight - padding;
         const availableHeight = contentBottom - contentTop;
 
@@ -115,7 +115,7 @@
                 width: leftColumnWidth,
                 align: 'left',
                 text: text,
-                fontSize: 14,
+                fontSize: 16,
                 fill: c.labelText,
             });
 
@@ -150,7 +150,7 @@
                 width: rightColumnWidth,   // ocupa solo la mitad derecha
                 align: 'right',
                 text: text,
-                fontSize: 14,
+                fontSize: 16,
                 fill: c.labelText,
             });
 

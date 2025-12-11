@@ -20,7 +20,7 @@
     // =========================
     // 1. GRID Y LAYOUT (Espaciado Mejorado)
     // =========================
-    const SCALE = 0.75;
+    const SCALE = 0.8;
     const MOD_W = 160 * SCALE; // ~120 ancho modulo
     const MOD_H = 260 * SCALE; // ~195 alto modulo
 
