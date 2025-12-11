@@ -13,38 +13,96 @@ export class Assembler {
     }
 
     assemble(text) {
-        const lines = text.split('\n'); // No filtramos aquí para conservar índices de línea
+        const rawLines = text.split('\n');
         const machineCode = [];
-        const lineMap = []; // Índice instrucción -> Número de línea en editor
+        const lineMap = []; 
+        
+        const instructions = []; 
+        const labels = {};       
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            // Ignorar líneas vacías o comentarios
-            if (line === '' || line.startsWith('#') || line.startsWith('//')) {
-                continue;
+        // ============================================
+        // 1. PRIMERA PASADA: Limpieza y Etiquetas
+        // ============================================
+        let instructionCounter = 0;
+
+        for (let i = 0; i < rawLines.length; i++) {
+            let line = rawLines[i].trim();
+            // Limpiar comentarios
+            line = line.split('#')[0].split('//')[0].trim();
+
+            if (!line) continue;
+
+            // Detectar etiquetas (ej: "loop:")
+            if (line.includes(':')) {
+                const parts = line.split(':');
+                const labelName = parts[0].trim();
+                labels[labelName] = instructionCounter * 4; 
+                line = parts.slice(1).join(':').trim();
             }
 
+            if (!line) continue;
+
+            // Parsear instrucción
+            const parts = line.replace(/,/g, ' ').trim().split(/\s+/);
+            const mnemonic = parts[0].toUpperCase();
+
+            // Manejo de NOP (pseudo-instrucción para ADDI x0, x0, 0)
+            if (mnemonic === 'NOP') {
+                instructions.push({
+                    mnemonic: 'ADDI',
+                    args: ['ADDI', 'x0', 'x0', '0'],
+                    originalLineIndex: i + 1,
+                    address: instructionCounter * 4
+                });
+            } else {
+                instructions.push({
+                    mnemonic,
+                    args: parts,
+                    originalLineIndex: i + 1,
+                    address: instructionCounter * 4
+                });
+            }
+
+            instructionCounter++;
+        }
+
+        // ============================================
+        // 2. SEGUNDA PASADA: Codificación
+        // ============================================
+        for (let i = 0; i < instructions.length; i++) {
+            const instr = instructions[i];
+            const currentPC = instr.address;
+
             try {
-                // Quitamos comas extra y dividimos por espacios
-                const parts = line.replace(/,/g, ' ').trim().split(/\s+/);
-                const mnemonic = parts[0].toUpperCase();
+                // Resolver etiquetas para Branches (Tipo B)
+                // En Tipo B, el argumento 3 (índice 3) es la etiqueta/offset
+                const isBranch = ['BEQ', 'BNE', 'BLT', 'BGE', 'BLTU', 'BGEU'].includes(instr.mnemonic);
+
+                if (isBranch) {
+                    const labelTarget = instr.args[3];
+                    if (isNaN(Number(labelTarget))) {
+                        if (labels[labelTarget] === undefined) throw new Error(`Etiqueta "${labelTarget}" no encontrada`);
+                        const offset = labels[labelTarget] - currentPC;
+                        instr.args[3] = offset.toString();
+                    }
+                }
                 
-                // Guardamos la instrucción y mapeamos su posición a la línea original (i + 1)
-                machineCode.push(this._encodeInstruction(mnemonic, parts));
-                lineMap.push(i + 1); 
+                // NOTA: Se eliminó la lógica de JUMPS (JAL/JALR) porque no están en la lista permitida.
+
+                const code = this._encodeInstruction(instr.mnemonic, instr.args);
+                machineCode.push(code);
+                lineMap.push(instr.originalLineIndex);
 
             } catch (e) {
-                throw new Error(`Error en línea ${i + 1} ("${lines[i]}"): ${e.message}`);
+                throw new Error(`Error en línea ${instr.originalLineIndex} (${instr.mnemonic}): ${e.message}`);
             }
         }
         
-        // Retornamos ambas cosas
         return { machineCode, lineMap };
     }
 
     _parseReg(regStr) {
         if (!regStr) throw new Error("Falta registro");
-        // Manejar sintaxis offset(base) para Loads/Stores ej: 0(x2)
         if (regStr.includes('(')) { 
             const match = regStr.match(/^(-?\d+)\((.+)\)$/);
             if(match) return { reg: this._getRegVal(match[2]), offset: Number(match[1]) };
@@ -59,23 +117,59 @@ export class Assembler {
     }
 
     _encodeInstruction(mnemonic, args) {
+        // MAPA ESTRICTO SEGÚN TU COMENTARIO
         const opcodeMap = {
+            // --- TIPO R (Opcode 0x33) ---
             'ADD':  { op: 0x33, f3: 0x0, f7: 0x00 },
             'SUB':  { op: 0x33, f3: 0x0, f7: 0x20 },
+            'SLL':  { op: 0x33, f3: 0x1, f7: 0x00 },
+            'SLT':  { op: 0x33, f3: 0x2, f7: 0x00 },
+            'SLTU': { op: 0x33, f3: 0x3, f7: 0x00 },
+            'XOR':  { op: 0x33, f3: 0x4, f7: 0x00 },
+            'SRL':  { op: 0x33, f3: 0x5, f7: 0x00 },
+            'SRA':  { op: 0x33, f3: 0x5, f7: 0x20 },
+            'OR':   { op: 0x33, f3: 0x6, f7: 0x00 },
+            'AND':  { op: 0x33, f3: 0x7, f7: 0x00 },
+
+            // --- TIPO I (Opcode 0x13) ---
             'ADDI': { op: 0x13, f3: 0x0 },
+            'SLLI': { op: 0x13, f3: 0x1, f7: 0x00 }, 
+            'SLTI': { op: 0x13, f3: 0x2 },
+            'SLTIU':{ op: 0x13, f3: 0x3 }, // Standard
+            'SLTUI':{ op: 0x13, f3: 0x3 }, // Alias según comentario ("sltui")
+            'XORI': { op: 0x13, f3: 0x4 },
+            'SRLI': { op: 0x13, f3: 0x5, f7: 0x00 }, 
+            'SRAI': { op: 0x13, f3: 0x5, f7: 0x20 }, 
+            'ORI':  { op: 0x13, f3: 0x6 },
+            'ANDI': { op: 0x13, f3: 0x7 },
+
+            // --- TIPO L (Loads - Opcode 0x03) ---
+            'LB':   { op: 0x03, f3: 0x0 },
+            'LH':   { op: 0x03, f3: 0x1 },
             'LW':   { op: 0x03, f3: 0x2 },
+            'LBU':  { op: 0x03, f3: 0x4 },
+            'LHU':  { op: 0x03, f3: 0x5 },
+
+            // --- TIPO S (Stores - Opcode 0x23) ---
+            'SB':   { op: 0x23, f3: 0x0 },
+            'SH':   { op: 0x23, f3: 0x1 },
             'SW':   { op: 0x23, f3: 0x2 },
+
+            // --- TIPO B (Branches - Opcode 0x63) ---
             'BEQ':  { op: 0x63, f3: 0x0 },
-            'BNE':  { op: 0x63, f3: 0x1 }
-            // Agrega más instrucciones aquí según tu unidadDeControl.js
+            'BNE':  { op: 0x63, f3: 0x1 },
+            'BLT':  { op: 0x63, f3: 0x4 },
+            'BGE':  { op: 0x63, f3: 0x5 },
+            'BLTU': { op: 0x63, f3: 0x6 },
+            'BGEU': { op: 0x63, f3: 0x7 },
         };
 
         const config = opcodeMap[mnemonic];
-        if (!config) throw new Error(`Instrucción no soportada: ${mnemonic}`);
+        if (!config) throw new Error(`Instrucción no soportada o fuera del set permitido: ${mnemonic}`);
 
         let rd, rs1, rs2, imm;
 
-        // TIPO R (ADD rd, rs1, rs2)
+        // CODIFICACIÓN TIPO R
         if (config.op === 0x33) {
             rd = this._parseReg(args[1]);
             rs1 = this._parseReg(args[2]);
@@ -83,24 +177,32 @@ export class Assembler {
             return (config.f7 << 25) | (rs2 << 20) | (rs1 << 15) | (config.f3 << 12) | (rd << 7) | config.op;
         }
 
-        // TIPO I (ADDI rd, rs1, imm)
-        if (config.op === 0x13) {
+        // CODIFICACIÓN TIPO I (Incluye Loads y Aritmética Inmediata)
+        if (config.op === 0x13 || config.op === 0x03) {
             rd = this._parseReg(args[1]);
-            rs1 = this._parseReg(args[2]);
-            imm = Number(args[3]);
-            return ((imm & 0xFFF) << 20) | (rs1 << 15) | (config.f3 << 12) | (rd << 7) | config.op;
+            
+            // Caso especial Loads: lw x1, 0(x2)
+            if (config.op === 0x03 && args[2].includes('(')) {
+                const memObj = this._parseReg(args[2]);
+                rs1 = memObj.reg;
+                imm = memObj.offset;
+            } else {
+                // Caso normal: addi x1, x2, 10
+                rs1 = this._parseReg(args[2]);
+                imm = Number(args[3]);
+            }
+
+            // Manejo especial de Shifts (SLLI, SRLI, SRAI): usan funct7
+            let immEncoded = imm & 0xFFF;
+            if (config.f7 !== undefined) {
+                const shamt = imm & 0x1F; // shift amount 5 bits
+                immEncoded = (config.f7 << 5) | shamt; 
+            }
+
+            return (immEncoded << 20) | (rs1 << 15) | (config.f3 << 12) | (rd << 7) | config.op;
         }
 
-        // LOAD (LW rd, offset(rs1))
-        if (config.op === 0x03) {
-            rd = this._parseReg(args[1]);
-            const memObj = this._parseReg(args[2]); // Devuelve objeto {reg, offset}
-            rs1 = memObj.reg;
-            imm = memObj.offset;
-            return ((imm & 0xFFF) << 20) | (rs1 << 15) | (config.f3 << 12) | (rd << 7) | config.op;
-        }
-
-        // STORE (SW rs2, offset(rs1))
+        // CODIFICACIÓN TIPO S
         if (config.op === 0x23) {
             rs2 = this._parseReg(args[1]);
             const memObj = this._parseReg(args[2]);
@@ -111,11 +213,12 @@ export class Assembler {
             return (imm11_5 << 25) | (rs2 << 20) | (rs1 << 15) | (config.f3 << 12) | (imm4_0 << 7) | config.op;
         }
         
-        // BRANCH (BEQ rs1, rs2, imm) - Nota: Simplificado, el imm es el offset
+        // CODIFICACIÓN TIPO B
         if (config.op === 0x63) {
             rs1 = this._parseReg(args[1]);
             rs2 = this._parseReg(args[2]);
-            imm = Number(args[3]);
+            imm = Number(args[3]); 
+            
             const imm12 = (imm >> 12) & 1;
             const imm10_5 = (imm >> 5) & 0x3F;
             const imm4_1 = (imm >> 1) & 0xF;
