@@ -1,3 +1,4 @@
+import konva from "konva";
 import { EditorState, StateEffect, StateField } from "@codemirror/state";
 import { EditorView, keymap, Decoration } from "@codemirror/view";
 import { defaultKeymap } from "@codemirror/commands";
