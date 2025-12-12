@@ -1,28 +1,177 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="./css/input.css">
     <title>Simulador de RISC-V | Documentación</title>
 </head>
-<body class="bg-bg-body">
-    <main class="flex flex-row gap-12">
-        <aside class="flex flex-col items-center justify-center bg-bg-primary text-text-primary w-2xs p-4 gap-4">
-            <div class="flex flex-col items-start justify-start gap-1">
-                <h1 class="text-sm">RISC-V Docs</h1>
-                <p class="text-xs">Manual de usuario</p>
+
+<body class="bg-bg-body text-text-primary font-Afacad h-screen overflow-hidden">
+    <main class="flex flex-row h-full">
+        
+        <aside class="flex flex-col bg-bg-primary w-64 p-6 gap-6 border-r border-outline shrink-0">
+            <div class="flex flex-col items-start gap-2 border-b border-outline pb-4 w-full">
+                <div class="flex items-center gap-2">
+                    <img src="./assets/images/RISC_V-logo.png" alt="Logo" class="w-8 h-8">
+                    <h1 class="text-xl font-bold font-Alumini-Sans">RISC-V Docs</h1>
+                </div>
+                <p class="text-xs text-text-muted">Manual de Usuario v1.0</p>
             </div>
-            <nav>
-                <a href="">Editor de codigo</a>
+
+            <nav class="flex flex-col gap-2 overflow-y-auto">
+                <a href="#editor" class="p-2 rounded hover:bg-bg-tertiary hover:text-active transition-colors text-sm">1. Editor de Código</a>
+                <a href="#controles" class="p-2 rounded hover:bg-bg-tertiary hover:text-active transition-colors text-sm">2. Controles de Simulación</a>
+                <a href="#datapath" class="p-2 rounded hover:bg-bg-tertiary hover:text-active transition-colors text-sm">3. Visualización (Datapath)</a>
+                <a href="#registros" class="p-2 rounded hover:bg-bg-tertiary hover:text-active transition-colors text-sm">4. Registros y Memoria</a>
+                <a href="#instrucciones" class="p-2 rounded hover:bg-bg-tertiary hover:text-active transition-colors text-sm">5. Set de Instrucciones (ISA)</a>
+                <a href="index.html" class="mt-4 p-2 rounded bg-bg-secondary text-center hover:scale-105 transform transition-transform text-sm font-bold">Volver al Simulador</a>
             </nav>
         </aside>
-        <div>
-            <section>
-                <h1>Editor de código</h1>
-                <p></p>
-            </section>
+
+        <div class="flex-1 overflow-y-auto p-8 scroll-smooth">
+            <div class="max-w-4xl mx-auto flex flex-col gap-12">
+
+                <section id="editor" class="flex flex-col gap-4">
+                    <h2 class="text-3xl font-bold font-Alumini-Sans text-active border-b border-outline pb-2">1. Editor de Código</h2>
+                    <p class="text-gray-300 leading-relaxed">
+                        El simulador cuenta con un editor de texto integrado basado en CodeMirror. Aquí puedes escribir tus programas en lenguaje ensamblador RISC-V. 
+                        El editor soporta resaltado de sintaxis y, durante la simulación, resaltará la línea que se está ejecutando actualmente.
+                    </p>
+                    <div class="bg-bg-tertiary p-4 rounded-lg border border-outline">
+                        <p class="text-sm font-mono text-green-400 mb-2">// Ejemplo de código soportado:</p>
+                        <pre class="font-mono text-sm text-gray-300">
+addi x1, x0, 10   # Inicializa x1 con 10
+addi x2, x0, 5    # Inicializa x2 con 5
+add x3, x1, x2    # x3 = x1 + x2
+sw x3, 0(x0)      # Guarda el resultado en memoria</pre>
+                    </div>
+                </section>
+
+                <section id="controles" class="flex flex-col gap-4">
+                    <h2 class="text-3xl font-bold font-Alumini-Sans text-active border-b border-outline pb-2">2. Controles de Simulación</h2>
+                    <p class="text-gray-300">Controla el flujo de ejecución del procesador utilizando la barra de herramientas superior:</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-start gap-3 bg-bg-active p-4 rounded-lg">
+                            <img src="./assets/icons/run.svg" class="w-6 h-6 bg-bg-secondary rounded p-1">
+                            <div>
+                                <strong class="block text-white">Run</strong>
+                                <span class="text-sm text-gray-400">Ensambla el código actual y carga el programa en la memoria de instrucciones. Es necesario pulsar este botón antes de empezar a simular o tras hacer cambios en el código.</span>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 bg-bg-active p-4 rounded-lg">
+                            <img src="./assets/icons/play.svg" class="w-6 h-6 bg-bg-tertiary rounded p-1">
+                            <div>
+                                <strong class="block text-white">Play / Pause</strong>
+                                <span class="text-sm text-gray-400">Ejecuta el programa de forma continua automática (aprox. 2 instrucciones por segundo). Pulsa de nuevo para pausar.</span>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 bg-bg-active p-4 rounded-lg">
+                            <img src="./assets/icons/next.svg" class="w-6 h-6 bg-bg-tertiary rounded p-1">
+                            <div>
+                                <strong class="block text-white">Next (Paso a paso)</strong>
+                                <span class="text-sm text-gray-400">Ejecuta exactamente una instrucción (un ciclo de reloj) y avanza el PC. Ideal para depuración detallada.</span>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 bg-bg-active p-4 rounded-lg">
+                            <img src="./assets/icons/reset.svg" class="w-6 h-6 bg-bg-tertiary rounded p-1">
+                            <div>
+                                <strong class="block text-white">Reset</strong>
+                                <span class="text-sm text-gray-400">Reinicia el procesador (PC=0), limpia los registros y la memoria de datos, pero mantiene el programa cargado.</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="datapath" class="flex flex-col gap-4">
+                    <h2 class="text-3xl font-bold font-Alumini-Sans text-active border-b border-outline pb-2">3. Visualización (Datapath)</h2>
+                    <p class="text-gray-300">
+                        En la vista "Watch Simulation", el sistema muestra un diagrama interactivo de la arquitectura RV32I. 
+                        Cada vez que se ejecuta una instrucción, el sistema ilumina los componentes activos y las rutas de datos.
+                    </p>
+                    <ul class="list-disc list-inside text-gray-300 space-y-2 ml-2">
+                        <li><strong class="text-white">Fetch:</strong> Se ilumina el PC y la Memoria de Programa.</li>
+                        <li><strong class="text-white">Decode:</strong> La Unidad de Control y el Generador de Inmediatos muestran los valores decodificados.</li>
+                        <li><strong class="text-white">Execute:</strong> La ALU muestra los operandos de entrada y el resultado de la operación.</li>
+                        <li><strong class="text-white">Memory:</strong> Si es un Load/Store, se activa la Memoria de Datos.</li>
+                        <li><strong class="text-white">Writeback:</strong> Se muestra el camino de regreso al Banco de Registros.</li>
+                    </ul>
+                </section>
+
+                <section id="registros" class="flex flex-col gap-4">
+                    <h2 class="text-3xl font-bold font-Alumini-Sans text-active border-b border-outline pb-2">4. Registros y Memoria</h2>
+                    <div class="flex flex-col gap-4">
+                        <div class="bg-bg-active p-4 rounded-lg border-l-4 border-bg-secondary">
+                            <h3 class="text-xl font-bold text-white mb-2">Banco de Registros (x0 - x31)</h3>
+                            <p class="text-sm text-gray-400">
+                                El simulador muestra los 32 registros de propósito general. 
+                                <br>Nota: El registro <code>x0 (zero)</code> es de solo lectura y siempre mantiene el valor 0.
+                                Los registros modificados recientemente se resaltan en color amarillo.
+                            </p>
+                        </div>
+                        <div class="bg-bg-active p-4 rounded-lg border-l-4 border-active">
+                            <h3 class="text-xl font-bold text-white mb-2">Memoria de Datos</h3>
+                            <p class="text-sm text-gray-400">
+                                Muestra el contenido de la memoria RAM (Heap/Stack). Solo se muestran las direcciones de memoria que han sido escritas (no nulas) para facilitar la lectura. Direccionamiento por bytes (Little Endian).
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="instrucciones" class="flex flex-col gap-4 mb-20">
+                    <h2 class="text-3xl font-bold font-Alumini-Sans text-active border-b border-outline pb-2">5. Set de Instrucciones (ISA)</h2>
+                    <p class="text-gray-300">El simulador soporta el subconjunto base <strong>RV32I</strong>.</p>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-bg-tertiary text-white border-b border-outline">
+                                    <th class="p-3">Tipo</th>
+                                    <th class="p-3">Instrucciones Soportadas</th>
+                                    <th class="p-3">Formato Ejemplo</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm text-gray-300">
+                                <tr class="border-b border-outline hover:bg-bg-active">
+                                    <td class="p-3 font-bold text-active">Tipo R</td>
+                                    <td class="p-3">ADD, SUB, AND, OR, XOR, SLL, SRL, SRA, SLT, SLTU</td>
+                                    <td class="p-3 font-mono">add rd, rs1, rs2</td>
+                                </tr>
+                                <tr class="border-b border-outline hover:bg-bg-active">
+                                    <td class="p-3 font-bold text-active">Tipo I</td>
+                                    <td class="p-3">ADDI, ANDI, ORI, XORI, SLLI, SRLI, SRAI, SLTI, SLTIU, JALR</td>
+                                    <td class="p-3 font-mono">addi rd, rs1, imm</td>
+                                </tr>
+                                <tr class="border-b border-outline hover:bg-bg-active">
+                                    <td class="p-3 font-bold text-active">Loads (I)</td>
+                                    <td class="p-3">LB, LH, LW, LBU, LHU</td>
+                                    <td class="p-3 font-mono">lw rd, offset(rs1)</td>
+                                </tr>
+                                <tr class="border-b border-outline hover:bg-bg-active">
+                                    <td class="p-3 font-bold text-active">Stores (S)</td>
+                                    <td class="p-3">SB, SH, SW</td>
+                                    <td class="p-3 font-mono">sw rs2, offset(rs1)</td>
+                                </tr>
+                                <tr class="border-b border-outline hover:bg-bg-active">
+                                    <td class="p-3 font-bold text-active">Branch (B)</td>
+                                    <td class="p-3">BEQ, BNE, BLT, BGE, BLTU, BGEU</td>
+                                    <td class="p-3 font-mono">beq rs1, rs2, label</td>
+                                </tr>
+                                <tr class="hover:bg-bg-active">
+                                    <td class="p-3 font-bold text-active">Upper (U/J)</td>
+                                    <td class="p-3">LUI, AUIPC, JAL</td>
+                                    <td class="p-3 font-mono">jal rd, label</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+            </div>
         </div>
     </main>
 </body>
+
 </html>
